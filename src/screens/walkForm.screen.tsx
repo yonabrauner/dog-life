@@ -1,21 +1,13 @@
-import React, {useDebugValue, useState} from "react";
+import React, { useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { View, Alert, TextInput, StyleSheet, Button, Text, TouchableOpacity } from "react-native";
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
-import { collection, addDoc } from 'firebase/firestore';
-import { db } from '../firebase/config'; // update the path if needed
 import { MultiSelect, Dropdown } from "react-native-element-dropdown";
-import { useNavigation } from "@react-navigation/native";
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { addWalk } from "../features/walks/walksSlice";
 import { AppDispatch } from "../store/store";
 import { useDispatch } from "react-redux";
 import Ionicons from 'react-native-vector-icons/Ionicons';
 
-// type HistoryScreenNavigationProp = NativeStackNavigationProp<
-//   RootStackParamList,
-//   'Add Walk'
-// >;
 
 const DOGS = [{ label: 'Ari', value: 'Ari' },
               { label: 'Cheetah', value: 'Cheetah' }];
@@ -27,7 +19,7 @@ const WALKERS = [{ label: 'Yonatan', value: 'Yonatan' },
                  { label: 'Mom', value: 'Mom' },
                  { label: 'Dad', value: 'Dad' },];
 
-export const WalkForm: React.FC = () => {
+export function WalkForm() {
   const [walker, setWalker] = useState('');
   const [duration, setDuration] = useState('');
   const [notes, setNotes] = useState('');
@@ -37,9 +29,7 @@ export const WalkForm: React.FC = () => {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
   const displayedValue = duration === "" ? "" : duration;
-
   const dispatch = useDispatch<AppDispatch>();
-  // const navigation = useNavigation<HistoryScreenNavigationProp>();
 
   const toggleActivity = (dog: string, type: 'pee' | 'poop') => {
     setDogActivities(prev => {
@@ -94,25 +84,23 @@ export const WalkForm: React.FC = () => {
     setShowTimePicker(false);
   };
 
-    const handleSubmit = async () => {
-      const dateString = date.getTime();
-      const finalDuration = duration === "" ? "15" : duration;
+  const handleSubmit = async () => {
+    const dateString = date.getTime();
+    const finalDuration = duration === "" ? "15" : duration;
 
-      if (!walker || !selectedDogs.length) {
-          Alert.alert('plase enter walker name and select dogs!');
-          return;
-      }
-
-      console.log("submitting walk - firing dispatch. date: ", dateString);
-      await dispatch(addWalk({ walker, dogs: selectedDogs, dogActivities, duration: Number(finalDuration), notes, date: dateString}))
-    
-      // setWalker('');
-      setDuration('');
-      setNotes('');
-      Alert.alert("Walk added!")
-      // setDogs('');
-
+    if (!walker || !selectedDogs.length) {
+        Alert.alert('plase enter walker name and select dogs!');
+        return;
     }
+
+    console.log("submitting walk - firing dispatch. date: ", dateString);
+    await dispatch(addWalk({ walker, dogs: selectedDogs, dogActivities, duration: Number(finalDuration), notes, date: dateString}))
+  
+    setDuration('');
+    setNotes('');
+    Alert.prompt("Walk added!")
+
+  }
 
 
     return(

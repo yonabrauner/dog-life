@@ -9,6 +9,7 @@ import { Provider } from 'react-redux';
 import { store } from './src/store/store';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import AppNavigator from './src/navigation/AppNavigator';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 // const Stack = createNativeStackNavigator<RootStackParamList>();
 const tab = createBottomTabNavigator();
@@ -16,7 +17,9 @@ const tab = createBottomTabNavigator();
 export default function App() {
   return (
     <Provider store={store}>
-      <AppNavigator />
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <AppNavigator />
+      </GestureHandlerRootView>
     </Provider>
   );
 }

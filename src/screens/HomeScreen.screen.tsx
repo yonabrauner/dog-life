@@ -6,7 +6,7 @@ import { selectAllWalks, selectLastWalk } from '../features/walks/walksSelectors
 import { listenToWalks } from '../features/walks/walksSlice';
 import { AppDispatch } from '../store/store';
 
-export const HomeScreen: React.FC = () => {
+export function HomeScreen() {
     const walks = useSelector(selectAllWalks);
     const dispatch = useDispatch<AppDispatch>();
     useEffect(() => {
