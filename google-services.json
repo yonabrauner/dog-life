@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "599300045306",
+    "project_id": "dog-life-cfade",
+    "storage_bucket": "dog-life-cfade.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:599300045306:android:c8055ac8aae7a4b057cc43",
+        "android_client_info": {
+          "package_name": "com.yonabrauner.doglife"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCw3Tekg6PXiaBRMB5NtjFfC8gl3noXQJg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
