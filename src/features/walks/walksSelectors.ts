@@ -1,6 +1,7 @@
 import { createSelector } from 'reselect';
 import { RootState } from '../../store/store';
 
+
 const selectWalksState = (state: RootState) => state.walks;
 
 export const selectAllWalks = createSelector(
@@ -8,24 +9,57 @@ export const selectAllWalks = createSelector(
   walksState => walksState.list,
 );
 
-// switch to choose between Cheetah and Ari (or any user configured name)
-export const makeSelectWalksByDog = (dogName: string) =>
-  createSelector([selectAllWalks], walks =>
-    walks.filter(walk => walk.dogs.includes(dogName.toLowerCase()))
-  );
+// last walk *in the past*
+export const selectLastWalk = (state: RootState) => state.walks.lastWalk;
 
-export const selectLastWalk = createSelector(
-    [selectAllWalks],
-    (walks) => {
-        const now = Date.now();
+export const selectTopWalker = (state: RootState) => state.walks.topWalker;
 
-        // Since walks are already sorted DESC, the first one that's < now is the last completed walk
-        for (const walk of walks) {
-            if (walk.date < now) {
-                return walk;
-            }
-        }
-        return undefined; // if no past walk found
-    },
-);
+
+const formatTimeDiff = (start: number, end: number): string => {
+  const diffMs = end - start;
+  const totalMinutes = Math.floor(diffMs / (1000 * 60));
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${pad(hours)}:${pad(minutes)}`;
+};
+
+export const selectTimeSinceLastWalk = (state: RootState) => {
+  const walk = selectLastWalk(state);
+  if (!walk) return null;
+
+  const now = Date.now();
+  const walkTime = new Date(walk.date).getTime();
+  return formatTimeDiff(walkTime, now);
+}
+
+// export const selectTimeSinceLastWalk = createSelector(
+//   [selectLastWalk],
+//   (walk) => {
+//     if (!walk) return null;
+
+//     const now = Date.now();
+//     const walkTime = new Date(walk.date).getTime();
+//     return(formatTimeDiff(walkTime, now));
+//   }
+// );
+
+export const makeSelectTimeSinceLastActivity = (
+  dogName: string,
+  activity: "pee" | "poop"
+) => { return(
+  createSelector(
+    (state: RootState) => state.walks.lastActivities,
+    (lastActivities) => {
+      const activityEntry = lastActivities[dogName]?.[activity];
+      if (!activityEntry) return null;
+
+      const now = Date.now();
+      const walkTime = new Date(activityEntry.date).getTime();
+      return formatTimeDiff(walkTime, now);
+    }
+  )
+)}
+
+
 

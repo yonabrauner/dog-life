@@ -1,83 +1,91 @@
-import React, { useEffect } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, Button } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
-import { format, isToday, compareDesc } from 'date-fns';
-import { selectAllWalks, selectLastWalk } from '../features/walks/walksSelectors';
-import { listenToWalks } from '../features/walks/walksSlice';
+import { selectTimeSinceLastWalk } from '../features/walks/walksSelectors';
 import { AppDispatch } from '../store/store';
+import { DogActivityCard } from '../components/DogActivityCard.component';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Image } from 'react-native';
+import { subscribeToWalks } from '../api/walks';
+import { selectAllDogs } from '../features/dogs/dogsSelectors';
+import { LastWalkCard } from '../components/LastWalkCard.component';
+import { TimeSinceLastWalkCard } from '../components/TimeSinceLastWalkCard.component';
+import { TopWalkerCard } from '../components/TopWalkerCard.component';
+import { DogsLastActivities } from '../components/DogsLastActivities.component';
 
 export function HomeScreen() {
-    const walks = useSelector(selectAllWalks);
-    const dispatch = useDispatch<AppDispatch>();
-    useEffect(() => {
-        const unsubscribe = dispatch(listenToWalks());
-        return () => {
-          if (typeof unsubscribe === 'function') {
-           unsubscribe();
-          }
-        } ;
-      }, [dispatch]);
-    
-    const todaysWalks = walks.filter(walk =>
-       isToday(new Date(walk.date))
-    );
+  const dispatch = useDispatch<AppDispatch>();
+  
+  
+  // refresh every minute
+  const [, setNow] = useState(Date.now());
+  useEffect(() => {
+    const interval = setInterval(() => setNow(Date.now()), 60000);
+    return () => clearInterval(interval);
+  }, []);
+  
+  useEffect(() => {
+    const unsubscribe = subscribeToWalks(dispatch);
+    return () => {
+      if (typeof unsubscribe === 'function') {
+        unsubscribe();
+      }
+    };
+  }, [dispatch]);
+  
 
-    const lastWalk = useSelector(selectLastWalk);
+  return (
+    <SafeAreaView edges={['bottom', 'left', 'right', 'top']} style={styles.safeArea}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
 
-    const lastWalkTime = lastWalk ?
-        format(new Date(lastWalk.date), 'EEEE, HH:mm')
-        : 'No walks yet';
+        <Text style={styles.heading}>Overview</Text>
 
-        return (
-    <View style={styles.container}>
-      <Text style={styles.heading}>Dog Life Dashboard</Text>
-      <View style={styles.card}>
-        <Text style={styles.stat}>{todaysWalks.length}</Text>
-        <Text style={styles.label}>Walks Today</Text>
-      </View>
-      <View style={styles.card}>
-        <Text style={styles.stat}>{lastWalkTime}</Text>
-        <Text style={styles.label}>Last Walk</Text>
-      </View>
-      <Text style={styles.message}>Ready for the next walk? 🐾</Text>
-    </View>
+        <View style={styles.dogRow}>
+          <Image source={require('../assets/Ari-happy.jpeg')} style={styles.dogImage} />
+          <Image source={require('../assets/Ari-cute-confused.jpeg')} style={styles.dogImage} />
+          <Image source={require('../assets/Cheetah-cool.jpeg')} style={styles.dogImage} />
+        </View>
+
+        <TimeSinceLastWalkCard />
+
+        <TopWalkerCard />
+        
+        <DogsLastActivities />
+        
+        <LastWalkCard />
+
+        <Text style={styles.message}>Ready for the next walk? 🐾</Text>
+
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
     flex: 1,
-    alignItems: 'center',
+  },
+  dogRow: {
+    flexDirection: 'row',
     justifyContent: 'center',
-    backgroundColor: '#f8f9fa',
-    padding: 20,
+    marginBottom: 20,
+  },
+  dogImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 40, // makes it circular
+    marginHorizontal: 10,
+    borderWidth: 2,
+    borderColor: '#ccc',
+  },
+  scrollContent: {
+    alignItems: 'center',
+    paddingVertical: 20,
   },
   heading: {
     fontSize: 24,
     fontWeight: 'bold',
     marginBottom: 20,
-  },
-  card: {
-    alignItems: 'center',
-    marginVertical: 10,
-    padding: 15,
-    borderRadius: 10,
-    backgroundColor: '#fff',
-    width: '80%',
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  stat: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#2c3e50',
-  },
-  label: {
-    fontSize: 16,
-    color: '#7f8c8d',
-    marginTop: 5,
   },
   message: {
     marginTop: 30,

@@ -1,29 +1,33 @@
 import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { listenToWalks } from "../features/walks/walksSlice";
 import { AppDispatch } from "../store/store";
 import { selectAllWalks } from "../features/walks/walksSelectors";
 import { FlatList } from "react-native-gesture-handler";
 import { StyleSheet } from 'react-native';
 import { WalkCard } from "./WalkCard.component";
+import { Walk } from "../features/walks/walksSlice";
+import { subscribeToWalks } from "../api/walks";
 
-export function WalkList() {
-    const walks = useSelector(selectAllWalks);
+interface Props {
+    data: Walk[];
+}
+
+export function WalkList({ data } : Props) {
     const dispatch = useDispatch<AppDispatch>();
-    const [expandedIds, setExpandedIds] = useState<string[]>([]);
+    const [expandedIds, setExpandedIds] = useState<number[]>([]);
     
     // listen and get updated walk list
     useEffect(() => {
-        const unsubscribe = dispatch(listenToWalks());
-        return () => {
+          const unsubscribe = subscribeToWalks(dispatch);
+          return () => {
             if (typeof unsubscribe === 'function') {
-                unsubscribe();
+              unsubscribe();
             }
-        };
-    }, [dispatch]);
+          };
+        }, [dispatch]);
 
     
-    const toggleExpand = (id: string) => {
+    const toggleExpand = (id: number) => {
         setExpandedIds(prev =>
             prev.includes(id) ? prev.filter(expandedId => expandedId !== id) : [...prev, id]
         );
@@ -31,8 +35,10 @@ export function WalkList() {
 
     return (
         <FlatList
-            data={walks}
-            keyExtractor={ item => item.id}
+            scrollEnabled={data.length !== 1}
+            data={data}
+            style={{width: '100%'}}
+            keyExtractor={ item => String(item.id)}
             renderItem={({ item }) => (
                 <WalkCard
                 walk={item}
@@ -49,4 +55,5 @@ export function WalkList() {
 const styles = StyleSheet.create({
   list: {
     padding: 10,
-  }});
+    }
+});

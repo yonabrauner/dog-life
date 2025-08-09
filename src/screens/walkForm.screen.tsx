@@ -1,60 +1,104 @@
-import React, { useState } from "react";
+import React, { act, useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { View, Alert, TextInput, StyleSheet, Button, Text, TouchableOpacity } from "react-native";
-import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
-import { MultiSelect, Dropdown } from "react-native-element-dropdown";
-import { addWalk } from "../features/walks/walksSlice";
+import { Alert, StyleSheet, Button, Text, Image } from "react-native";
+import { DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import { submitWalk } from "../features/walks/walksSlice";
 import { AppDispatch } from "../store/store";
-import { useDispatch } from "react-redux";
-import Ionicons from 'react-native-vector-icons/Ionicons';
+import { useDispatch, useSelector } from "react-redux";
+import { WalkerDropdown } from "../components/forms/WalkerDropdown.component";
+import { DogsMultiSelect } from "../components/forms/DogsMultiSelect.component";
+import { DateTimePickerField } from "../components/forms/DateTimePickerField.component";
+import { DurationInput } from "../components/forms/DurationInput.component";
+import { NotesInput } from "../components/forms/NotesInput.component";
+import { DogActivityToggles } from "../components/forms/DogActivityToggles.component";
+import { selectAllDogs } from "../features/dogs/dogsSelectors";
+import { SkiddingDog } from "../components/animations/skiddingDog";
+import { Dog } from "../features/dogs/dogsSlice";
 
-
-const DOGS = [{ label: 'Ari', value: 'Ari' },
-              { label: 'Cheetah', value: 'Cheetah' }];
-
-const WALKERS = [{ label: 'Yonatan', value: 'Yonatan' },
-                 { label: 'Oz', value: 'Oz' },
-                 { label: 'Avi', value: 'Avi' },
-                 { label: 'Oded', value: 'Oded' },
-                 { label: 'Mom', value: 'Mom' },
-                 { label: 'Dad', value: 'Dad' },];
+export interface formDogActivity {
+  dogName: string;
+  poop: boolean;
+  pee: boolean;
+}
 
 export function WalkForm() {
-  const [walker, setWalker] = useState('');
+  const [walkerName, setWalkerName] = useState('');
   const [duration, setDuration] = useState('');
   const [notes, setNotes] = useState('');
   const [selectedDogs, setSelectedDogs] = useState<string[]>([]);
-  const [dogActivities, setDogActivities] = useState<{ dog: string; pee: boolean, poop: boolean; }[]>([]);
+  const [dogActivities, setDogActivities] = useState<formDogActivity[]>([]);
   const [date, setDate] = useState<Date>(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
+  const [animatedDogs, setAnimatedDogs] = useState<{id: number, leftToRight: boolean, dog: Dog}[]>([]);
+  const dogs = useSelector(selectAllDogs);
   const displayedValue = duration === "" ? "" : duration;
   const dispatch = useDispatch<AppDispatch>();
 
+  
   const toggleActivity = (dog: string, type: 'pee' | 'poop') => {
     setDogActivities(prev => {
       const updated = [...prev];
-      const index = updated.findIndex(d => d.dog === dog);
+      const index = updated.findIndex(activity => activity.dogName === dog);
 
       if (index >= 0) {
         updated[index][type] = !updated[index][type];
       } else {
-        updated.push({ dog, pee: type === 'pee', poop: type === 'poop' });
+        updated.push({ dogName: dog , pee: type === 'pee', poop: type === 'poop' });
       }
       return updated;
     });
   };
 
-  const handleDogSelection = (dogs: string[]) => {
-    setSelectedDogs(dogs);
+
+  const spawnDog = (leftToRight: boolean, dog: Dog | undefined) => {
+    if (dog){
+      const id: number = Math.random() * Date.now();
+      setAnimatedDogs(prev => [...prev, {id, leftToRight, dog}]);
+    } else {
+      console.error("dog is undefined..");
+    }
+  };
+
+  const handleDogFinish = (id: number) => {
+    setTimeout(() => {
+      setAnimatedDogs(prev => prev.filter(d => d.id !== id));
+    }, 0);
+  };
+
+
+  const handleDogSelection = (dogsSelected: string[]) => {
+    const selected: string | undefined  = dogsSelected.find(dog => !selectedDogs.includes(dog));
+    const deselected: string | undefined = selectedDogs.find(dog => !dogsSelected.includes(dog));
+    const dog: Dog | undefined = selected ? dogs.find(dog => dog.name == selected) : dogs.find(dog => dog.name == deselected);
+
+    if (selected){
+      spawnDog(true, dog);
+    }
+    
+    if (deselected){
+      spawnDog(false, dog);
+    }
+    
+    setSelectedDogs(dogsSelected);
     // Keep dogActivities synced (remove ones not selected)
-    setDogActivities(prev => prev.filter(a => dogs.includes(a.dog)));
+    setDogActivities(prev => prev.filter(activity => dogsSelected.includes(activity.dogName)));
     // Add default entries for new dogs
-    dogs.forEach(dog => {
-      if (!dogActivities.some(a => a.dog === dog)) {
-        setDogActivities(prev => [...prev, { dog, pee: false, poop: false }]);
+    dogsSelected.forEach(dog => {
+      if (!dogActivities.some(activity => activity.dogName === dog)) {
+        setDogActivities(prev => [...prev, { dogName: dog , pee: false, poop: false }]);
       }
     });
+  };
+
+  const renderLabel = () => {
+    if (selectedDogs.length > 0) {
+      const dogNames = dogs.filter(dog => selectedDogs.includes(dog.name))
+        .map(dog => dog.name)
+        .join(', ');
+      return dogNames;
+    }
+    return 'Select dogs';
   };
 
   const onDateChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
@@ -87,121 +131,77 @@ export function WalkForm() {
   const handleSubmit = async () => {
     const dateString = date.getTime();
     const finalDuration = duration === "" ? "15" : duration;
+    // const finalDogActivities: submitDogActivity[] = dogActivities.map(activity => {
+    //   const dogId = dogs.find(dog => dog.name === activity.dogName )!.id;
+    //   return {dogId: dogId, pee: activity.pee, poop: activity.poop};
+    // })
 
-    if (!walker || !selectedDogs.length) {
+    if (!walkerName || !selectedDogs.length) {
         Alert.alert('plase enter walker name and select dogs!');
         return;
     }
 
-    console.log("submitting walk - firing dispatch. date: ", dateString);
-    await dispatch(addWalk({ walker, dogs: selectedDogs, dogActivities, duration: Number(finalDuration), notes, date: dateString}))
+    await dispatch(submitWalk({ walkerName, dogActivities, duration: Number(finalDuration), notes, date: dateString}))
   
     setDuration('');
     setNotes('');
-    Alert.prompt("Walk added!")
+    setDogActivities([]);
+    setDate(new Date());
+    setShowDatePicker(false);
+    setShowTimePicker(false);
+    Alert.alert("Walk added!");
 
-  }
+  };
 
 
     return(
       <SafeAreaView style={styles.container} edges={['bottom', 'left', 'right']}>
-        <Dropdown
-          style={styles.dropdown}
-          placeholderStyle={styles.placeholderStyle}
-          selectedTextStyle={styles.selectedTextStyle}
-          data={WALKERS}
-          labelField="label"
-          valueField="value"
-          placeholder="Select walker"
-          value={walker}
-          onChange={item => setWalker(item.value)} // Update state when selected
+        <Text style={styles.heading}>{"New Walk"}</Text>
+        <WalkerDropdown
+          value={walkerName}
+          onChange={setWalkerName}
         />
-        
-        {/* <Text style={styles.label}>Select Dogs:</Text> */}
-        <MultiSelect
-          style={styles.dropdown}
-          placeholderStyle={styles.placeholderStyle}
-          selectedTextStyle={styles.selectedTextStyle}
-          data={DOGS}
-          labelField="label"
-          valueField="value"
-          placeholder="Select dogs"
+       
+        <DogsMultiSelect
           value={selectedDogs}
           onChange={handleDogSelection}
-          selectedStyle={styles.selectedStyle}
+          placeholder={renderLabel}
+          selected={selectedDogs}
         />
-
-        {selectedDogs.map(dog => {
-          const activity = dogActivities.find(a => a.dog === dog);
-          return (
-            <View key={dog} style={styles.activityRow}>
-              <Text style={styles.dogName}>{dog}</Text>
-              <TouchableOpacity
-                style={[
-                  styles.toggleButton,
-                  activity?.pee ? styles.activeButton : null,
-                ]}
-                onPress={() => toggleActivity(dog, 'pee')}
-              >
-                <Text style={styles.buttonText}>Pee</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.toggleButton,
-                  activity?.poop ? styles.activeButton : null,
-                ]}
-                onPress={() => toggleActivity(dog, 'poop')}
-              >
-                <Text style={styles.buttonText}>Poop</Text>
-              </TouchableOpacity>
-            </View>
-          );
-        })}
-
-
-        <View style={styles.dateRow}>
-          <Text style={styles.dateText}>
-            {date.toLocaleDateString()} {date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-          </Text>
-          <TouchableOpacity onPress={() => setShowDatePicker(true)} style={styles.iconButton}>
-            <Ionicons name="calendar" size={24} color="#333" />
-          </TouchableOpacity>
-        </View>
         
-        {showDatePicker && ( <DateTimePicker
-            value={date}
-            mode="date" // could also be "time" or "datetime"
-            display="default"
-            onChange={onDateChange}
-          />
-        )}
-        {showTimePicker && ( <DateTimePicker
-            value={date}
-            mode="time"
-            display="default"
-            onChange={onTimeChange}
-          />
-        )}
-
-        <TextInput
-            style={styles.input}
-            placeholder="Duration (minutes) - 15"
-            value={displayedValue}
-            defaultValue="15"
-            onChangeText={setDuration}
-            keyboardType="numeric"
+        <DogActivityToggles
+          selectedDogs={selectedDogs}
+          dogActivities={dogActivities}
+          toggleActivity={toggleActivity}
+        />
+        
+        <DateTimePickerField
+          date={date}
+          showDatePicker={showDatePicker}
+          showTimePicker={showTimePicker}
+          setShowDatePicker={setShowDatePicker}
+          setShowTimePicker={setShowTimePicker}
+          onDateChange={onDateChange}
+          onTimeChange={onTimeChange}
+        />
+     
+        <DurationInput
+          placeholder="Duration (minutes) - 15"
+          value={displayedValue}
+          onChange={setDuration}
         />
 
-        <TextInput
-            style={[styles.input, styles.notes]}
-            placeholder="Notes (optional)"
-            value={notes}
-            onChangeText={setNotes}
-            multiline
+        <NotesInput
+          placeholder="Notes (optional)"
+          value={notes}
+          onChange={setNotes}
         />
-
+        
         <Button title="Save Walk" onPress={handleSubmit} />
-        {/* <Button title="Back to History" onPress={() => navigation.navigate('History')} /> */}
+        
+        {animatedDogs.map( animated => 
+          <SkiddingDog key={animated.id} leftToRight={animated.leftToRight} dog={animated.dog} onFinish={() => handleDogFinish(animated.id)} />
+        )}
 
       </SafeAreaView>
     );
@@ -210,56 +210,14 @@ export function WalkForm() {
 const styles = StyleSheet.create({
   container: {
     padding: 20,
+    paddingTop: 100,
     gap: 10,
+    justifyContent: 'center',
   },
-  input: {
-    borderWidth: 1,
-    borderColor: '#888',
-    borderRadius: 5,
-    padding: 10,
-  },
-  notes: {
-    minHeight: 60,
-  },
-  label: { fontSize: 18, marginBottom: 8 },
-  dropdown: {
-    height: 50,
-    borderColor: '#ccc',
-    borderWidth: 1,
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    marginBottom: 3,
-  },
-  placeholderStyle: { fontSize: 16, color: '#999' },
-  selectedTextStyle: { fontSize: 16 },
-  selectedStyle: { borderRadius: 12, backgroundColor: '#add8e6' },
-  activityRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: 8,
-  },
-  dogName: { fontSize: 16, marginRight: 10 },
-  toggleButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    backgroundColor: '#eee',
-    borderRadius: 6,
-    marginHorizontal: 5,
-  },
-  activeButton: { backgroundColor: '#90ee90' },
-  buttonText: { fontSize: 14 },
-   dateRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: 10,
-  },
-  iconButton: {
-    padding: 4,
-    marginLeft: 80,
-  },
-  dateText: {
-    paddingLeft: 10,
-    fontSize: 16,
-    color: '#333',
+  heading: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 20,
+    textAlign: 'center',
   },
 });

@@ -1,16 +1,11 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-
-interface DogActivity {
-  dog: string;
-  pee: boolean;
-  poop: boolean;
-}
+import { DogActivity } from '../features/walks/walksSlice';
 
 export default function WalkActivityRow({ activity }: { activity: DogActivity }) {
   return (
     <View style={styles.row}>
-      <Text style={styles.dog}>{activity.dog}:</Text>
+      <Text style={styles.dog}>{activity.dog.name}:</Text>
       <Text style={[styles.activity, activity.pee && styles.active]}>Pee</Text>
       <Text style={[styles.activity, activity.poop && styles.active]}>Poop</Text>
     </View>

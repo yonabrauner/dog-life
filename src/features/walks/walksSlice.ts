@@ -1,90 +1,97 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
-import { onSnapshot, orderBy ,query, collection, addDoc, getDocs, getFirestore, Timestamp, serverTimestamp, FieldValue } from 'firebase/firestore';
 import { AppDispatch, RootState } from '../../store/store';
-import { db } from '../../firebase/config'; // assuming you already set this up
-
-
-export interface dogActivity {
-    dog: string;
-    pee: boolean;
-    poop: boolean;
+import { fetchLastWalk, fetchWalks, subscribeToWalks, createWalk, fetchLastActivity, fetchTopWalker } from '../../api/walks';
+import { Dog } from '../dogs/dogsSlice';
+import { GetState } from '@reduxjs/toolkit';
+import { formDogActivity } from '../../screens/walkForm.screen';
+import { selectAllDogs, selectDogsState } from '../dogs/dogsSelectors';
+export interface DogActivity {
+  id: number;
+  walkId: string;
+  dogId: string;
+  pee: boolean;
+  poop: boolean;
+  dog: Dog;
+  walk: Walk;
 }
 
 export interface Walk {
-  id: string;
-  walker: string;   
-  dogs: string[];     
-  dogActivities: dogActivity[];
-  duration: number;
+  id: number;
   date: number;
+  duration: number;
+  walkerName: string;   
+  dogActivities: (formDogActivity | DogActivity)[];
   notes?: string;
 }
 
 interface WalksState {
   list: Walk[];
+  lastWalk: Walk | null;
+  topWalker: {walker: string; count: number};
   loading: boolean;
   error: string | null;
+  lastActivities: {
+    [dogName: string]: {
+      pee?: Walk;
+      poop?: Walk;
+    };
+  };
 }
 
 const initialState: WalksState = {
   list: [],
+  lastWalk: null,
+  topWalker: {walker: "no data", count: 0},
   loading: false,
   error: null,
-};
-
-export const listenToWalks = () => (dispatch: AppDispatch) => {
-  const q = query(collection(db, 'walks'), orderBy('date', 'desc'));
-
-  const unsubscribe = onSnapshot(q, snapshot => {
-    const walks = snapshot.docs.map(doc => {
-        const data = doc.data() as any;
-        return {
-        id: doc.id,
-        ...data,
-        date: data.date instanceof Timestamp ? data.date.toMillis() : data.date, 
-        // fallback if somehow still string (old docs)
-      } as Walk;
-    });
-
-    console.log('Snapshot update, docs count:', snapshot.size);
-    dispatch(setWalks(walks)); 
-  });
-
-  return unsubscribe; // so the component can stop listening when unmounted
+  lastActivities: {},
 };
 
 
-export const addWalk = createAsyncThunk<Walk, Omit<Walk, 'id'> & { date?: number }>(
-  'walks/add',
-  async (walk) => {
-    
-    const dateValue: Timestamp = walk.date? Timestamp.fromMillis(walk.date) : Timestamp.now();
+// Thunk to load walks and subscribe for live updates
+export const startWalksListener = createAsyncThunk< void, void, { dispatch: AppDispatch; state: RootState }>(
+  "walks/startListener",
+  async (_, { dispatch }) => {
+    // 1. Fetch initial list of walks
+    const walks = await fetchWalks();
+    dispatch(setWalks(walks));
 
-    console.log("Type of dateValue before addDoc:", typeof dateValue); // Should be 'object'
-    console.log("Is dateValue a Timestamp instance?", dateValue instanceof Timestamp); // Should be 'true'
-
-    
-    const docRef = await addDoc(collection(db, 'walks'), {
-      walker: walk.walker,
-      dogs: walk.dogs,
-      dogActivities: walk.dogActivities,
-      duration: walk.duration,
-      notes: walk.notes,
-      date: dateValue,
+    subscribeToWalks((data) => {
+      dispatch(setWalks(data)); 
     });
 
-    const serializableDate = dateValue.toMillis();
-    return {
-      id: docRef.id,
-      walker: walk.walker,
-      dogs: walk.dogs,
-      dogActivities: walk.dogActivities,
-      duration: walk.duration,
-      notes: walk.notes,
-      date: serializableDate,
-    };
   }
 );
+
+
+export const submitWalk = createAsyncThunk<Walk, Omit<Walk, 'id'> & { date?: number }>(
+  'walks/add',
+  async (walk) => {
+    return await createWalk(walk); // API call to backend
+  }
+);
+
+// last walk *in the past*
+export const getLastWalk = createAsyncThunk("walks/getLastWalk", async () => {
+  console.log("getLastWalk in walkSlice was fired");
+  return await fetchLastWalk();
+});
+
+export const getTopWalker = createAsyncThunk("walks/getTopWalker", async () => {
+  const topWalker = await fetchTopWalker();
+  return topWalker;
+})
+
+// last activities
+export const getLastActivity = createAsyncThunk<
+  { dogName: string; activity: "pee" | "poop"; walk: Walk | null },
+  { dogName: string; activity: "pee" | "poop" }
+>("walks/getLastActivity", async ({ dogName, activity }) => {
+  console.log("getLastActivity in walkSlice was fired");
+  const data = await fetchLastActivity(dogName, activity); // API call
+  return { dogName, activity, walk: data?.walk ?? null };
+});
+
 
 const walksSlice = createSlice({
   name: 'walks',
@@ -93,14 +100,44 @@ const walksSlice = createSlice({
     setWalks(state, action: PayloadAction<Walk[]>) {
       state.list = action.payload;
     },
+    addWalk: (state, action: PayloadAction<Walk>) => {
+      state.list.unshift(action.payload); // newest first
+    },
   },
   extraReducers: builder => {
     builder
-      .addCase(addWalk.fulfilled, (state, action: PayloadAction<Walk>) => {
-        console.log('Added:', action.payload)
-    });
+      .addCase(getLastActivity.fulfilled, (state, action) => {
+        const { dogName, activity, walk } = action.payload;
+        if (!state.lastActivities[dogName]) {
+          state.lastActivities[dogName] = {};
+        }
+        state.lastActivities[dogName][activity] = walk ?? undefined;
+      }).addCase(submitWalk.fulfilled, (state, action) => {
+        state.list.unshift(action.payload);
+        const walk = action.payload;
+        state.lastWalk = walk;
+        const activities = walk.dogActivities.filter((a): a is DogActivity => 'dog' in a);
+        for (const act of activities){
+          if (act.pee) state.lastActivities[act.dog.name].pee = walk;
+          if (act.poop) state.lastActivities[act.dog.name].poop = walk;
+        }
+      }).addCase(getLastWalk.pending, (state) => {
+        state.loading = true;
+      }).addCase(getLastWalk.fulfilled, (state, action) => {
+        state.loading = false;
+        state.lastWalk = action.payload;
+      }).addCase(getLastWalk.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.error.message || "Failed to fetch last walk";
+      }).addCase(getTopWalker.fulfilled, (state, action) => {
+        state.loading = false;
+        state.topWalker = action.payload;
+      }).addCase(getTopWalker.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.error.message || "Failed to fetch top walker";
+      })
   },
 });
 
 export default walksSlice.reducer;
-export const { setWalks } = walksSlice.actions;
+export const { setWalks, addWalk } = walksSlice.actions;
