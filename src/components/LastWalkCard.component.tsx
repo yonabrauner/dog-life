@@ -2,6 +2,7 @@ import { StyleSheet, Text, View } from "react-native";
 import { WalkList } from "./WalkList.component";
 import { useSelector } from "react-redux";
 import { selectLastWalk } from "../features/walks/walksSelectors";
+import { MyTheme } from "../constants/Theme";
 
 
 
@@ -24,7 +25,7 @@ const styles = StyleSheet.create({
     marginVertical: 10,
     padding: 15,
     borderRadius: 10,
-    backgroundColor: '#fff',
+    backgroundColor: MyTheme.colors.primary,
     width: '80%',
     shadowColor: '#000',
     shadowOpacity: 0.1,
@@ -33,11 +34,11 @@ const styles = StyleSheet.create({
   },
   stat: {
     fontSize: 28,
-    fontWeight: 'bold',
-    color: '#2c3e50',
-  },
+    fontFamily: "Quicksand_700Bold",
+    color: MyTheme.colors.text,  },
   label: {
     fontSize: 16,
-    color: '#7f8c8d',
-    marginTop: 5,
-}});
+    color: '#e6ccb2',
+    fontFamily: "Quicksand_600SemiBold",
+  },
+});

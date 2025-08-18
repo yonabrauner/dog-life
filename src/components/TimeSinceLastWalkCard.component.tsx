@@ -2,6 +2,7 @@ import React from "react";
 import { useSelector } from "react-redux";
 import { selectTimeSinceLastWalk } from "../features/walks/walksSelectors";
 import { StyleSheet, Text, View } from "react-native";
+import { MyTheme } from "../constants/Theme";
 
 export function TimeSinceLastWalkCard() {
     const timeSinceLastWalk = useSelector(selectTimeSinceLastWalk);
@@ -21,7 +22,7 @@ const styles = StyleSheet.create({
     marginVertical: 10,
     padding: 15,
     borderRadius: 10,
-    backgroundColor: '#fff',
+    backgroundColor: MyTheme.colors.primary,
     width: '80%',
     shadowColor: '#000',
     shadowOpacity: 0.1,
@@ -30,12 +31,12 @@ const styles = StyleSheet.create({
   },
   stat: {
     fontSize: 28,
-    fontWeight: 'bold',
-    color: '#2c3e50',
-  },
+    fontFamily: "Quicksand_700Bold",
+    color: MyTheme.colors.text,  },
   label: {
     fontSize: 16,
-    color: '#7f8c8d',
+    color: '#e6ccb2',
+    fontFamily: "Quicksand_600SemiBold",
     marginTop: 5,
   },
 })

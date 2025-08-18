@@ -1,69 +1,107 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import DateTimePicker from '@react-native-community/datetimepicker';
-import { Ionicons } from '@expo/vector-icons';
+import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import { FORMBUTTONSIZE } from '../../constants/FormConstants';
+import CalendarSvg from '../../assets/calendar-clock.svg';
 
 
 interface Props {
   date: Date;
-  showDatePicker: boolean;
-  showTimePicker: boolean;
-  setShowDatePicker: (value: boolean) => void;
-  setShowTimePicker: (value: boolean) => void;
-  onDateChange: (event: any, selectedDate?: Date) => void;
-  onTimeChange: (event: any, selectedDate?: Date) => void;
+  onChange: (date: React.SetStateAction<Date>) => void;
 }
 
-export function DateTimePickerField({ date, showDatePicker, showTimePicker, setShowDatePicker, setShowTimePicker, onDateChange, onTimeChange }: Props) {
-  return (
-    <View style={styles.dateRow}>
-      <TouchableOpacity onPress={() => setShowDatePicker(true)} style={styles.iconButton}>
-        <Text style={styles.dateText}>
-          {date.toLocaleDateString()} {date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-        </Text>
-        <Ionicons name="calendar" size={36} color="#333" />
-      </TouchableOpacity>
+export function DateTimePickerField({ date, onChange }: Props) {
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
 
-      {showDatePicker && (
-        <DateTimePicker
-          value={date}
-          mode="date"
-          display="default"
-          onChange={onDateChange}
-        />
-      )}
-      {showTimePicker && (
-        <DateTimePicker
-          value={date}
-          mode="time"
-          display="default"
-          onChange={onTimeChange}
-        />
-      )}
-    </View>
-  );
+  const onDateChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
+  
+      if (event.type === 'dismissed') {
+        setShowDatePicker(false); // Close on cancel
+        return;
+      }
+      if (selectedDate) {
+        onChange(prev => new Date(selectedDate.setHours(prev.getHours(), prev.getMinutes())));
+      }
+      setShowDatePicker(false);
+      setShowTimePicker(true); // Open time picker after date selection
+    };
+  
+    const onTimeChange = (event: DateTimePickerEvent, selectedTime?: Date) => {
+      if (event.type === 'dismissed') {
+        setShowTimePicker(false); // Close on cancel
+        return;
+      }
+      if (selectedTime) {
+        onChange(prev => {
+          const newDate = new Date(prev);
+          newDate.setHours(selectedTime.getHours(), selectedTime.getMinutes());
+          return newDate;
+        });
+      }
+      setShowTimePicker(false);
+    };
+
+  return (<>
+
+    <TouchableOpacity
+      style={[styles.button, date ? null : styles.unfulfilled]}
+      onPress={() => setShowDatePicker(true)}
+    >
+      <View style={styles.iconContainer}>
+        <CalendarSvg width={FORMBUTTONSIZE * 0.9} height={FORMBUTTONSIZE * 0.9} />
+      </View> 
+    </TouchableOpacity>
+    <Text style={styles.selectedText}>
+      {date.toLocaleDateString()} {date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+    </Text>
+
+    {showDatePicker && (
+      <DateTimePicker
+        value={date}
+        mode="date"
+        display="default"
+        onChange={onDateChange}
+      />
+    )}
+
+    {showTimePicker && (
+      <DateTimePicker
+        value={date}
+        mode="time"
+        display="default"
+        onChange={onTimeChange}
+      />
+    )}
+  </>);
 }
 
 const styles = StyleSheet.create({
-  dateRow: {
-    borderColor: '#888',
-    borderWidth: 1,
-    borderRadius: 5,
-    padding: 10,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  button: {
+    width: FORMBUTTONSIZE,
+    height: FORMBUTTONSIZE,
+    borderRadius: 12,
+    backgroundColor: '#FFB84D', // warm & playful
+    justifyContent: 'center',
     alignItems: 'center',
-    marginVertical: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.5,
+    elevation: 5, // Android shadow
   },
-  dateText: {
-    fontSize: 16,
-    marginRight: 10,
+  unfulfilled: {
+    borderWidth: 5,
+    borderColor: '#fc5411ff',
   },
-  iconButton: {
-    // padding: 4,
-    flex: 1,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  iconContainer: {
+    justifyContent: 'center',
     alignItems: 'center',
+  },
+  selectedText: {
+    fontFamily: "Quicksand_400Regular",
+    textAlign: 'center',
+    width: FORMBUTTONSIZE,
+    marginTop: 2,
   },
 });

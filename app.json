@@ -5,7 +5,7 @@
     "scheme": "doglife",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./src/assets/Cheetah-cool.jpeg",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
@@ -18,7 +18,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
+        "foregroundImage": "./src/assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
@@ -32,6 +32,9 @@
         "projectId": "57f0ea09-52c5-40bc-8a5a-24264264736c"
       }
     },
-    "owner": "yonabrauner"
+    "owner": "yonabrauner",
+    "plugins": [
+      "expo-font"
+    ]
   }
 }

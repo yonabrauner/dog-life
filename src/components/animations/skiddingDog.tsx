@@ -20,7 +20,7 @@ export function SkiddingDog({ leftToRight, dog, onFinish }: Props) {
     
     useEffect(() => {
       const startX = leftToRight? width - 400 : width - 50;
-      const startY = -100; // avoid very top/bottom
+      const startY = -300; // avoid very top/bottom
       const endX = leftToRight? width + 100 : width - 550;
       const endY = startY + (Math.random() * 200 - 100); // drift slightly up or down
       translateX.setValue(startX);

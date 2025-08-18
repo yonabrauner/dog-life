@@ -2,6 +2,7 @@ import { useSelector } from "react-redux";
 import { makeSelectTimeSinceLastActivity } from "../features/walks/walksSelectors";
 import { StyleSheet, Text, View } from "react-native";
 import { Dog } from "../features/dogs/dogsSlice";
+import { MyTheme } from "../constants/Theme";
 
 export function DogActivityCard( { dog } : {dog: Dog} ) {
   const pee = useSelector(makeSelectTimeSinceLastActivity(dog.name, 'pee'));
@@ -31,7 +32,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 5,
     padding: 15,
     borderRadius: 10,
-    backgroundColor: '#fff',
+    backgroundColor: MyTheme.colors.primary,
     width: '40%',
     shadowColor: '#000',
     shadowOpacity: 0.1,
@@ -40,12 +41,14 @@ const styles = StyleSheet.create({
   },
   dogName: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontFamily: "Quicksand_700Bold",
+    color: MyTheme.colors.text,
     marginBottom: 5,
   },
   activity: {
     fontSize: 16,
-    color: '#555',
+    fontFamily: "Quicksand_600SemiBold",
+    color: '#e6ccb2',
   },
 });
 

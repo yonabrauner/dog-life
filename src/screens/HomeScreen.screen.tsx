@@ -83,14 +83,14 @@ const styles = StyleSheet.create({
     paddingVertical: 20,
   },
   heading: {
+    fontFamily: "Quicksand_700Bold",
     fontSize: 24,
-    fontWeight: 'bold',
     marginBottom: 20,
   },
   message: {
     marginTop: 30,
     fontSize: 18,
-    fontStyle: 'italic',
+    fontFamily: "Quicksand_600SemiBold",
   },
 });
 

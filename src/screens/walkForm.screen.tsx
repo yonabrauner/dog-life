@@ -1,7 +1,6 @@
-import React, { act, useState } from "react";
+import React, { useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Alert, StyleSheet, Button, Text, Image } from "react-native";
-import { DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import { Alert, StyleSheet, Text, View, TouchableOpacity, ScrollView } from "react-native";
 import { submitWalk } from "../features/walks/walksSlice";
 import { AppDispatch } from "../store/store";
 import { useDispatch, useSelector } from "react-redux";
@@ -14,6 +13,9 @@ import { DogActivityToggles } from "../components/forms/DogActivityToggles.compo
 import { selectAllDogs } from "../features/dogs/dogsSelectors";
 import { SkiddingDog } from "../components/animations/skiddingDog";
 import { Dog } from "../features/dogs/dogsSlice";
+import { Ionicons } from "@expo/vector-icons";
+import { MyTheme } from "../constants/Theme";
+
 
 export interface formDogActivity {
   dogName: string;
@@ -23,16 +25,13 @@ export interface formDogActivity {
 
 export function WalkForm() {
   const [walkerName, setWalkerName] = useState('');
-  const [duration, setDuration] = useState('');
+  const [duration, setDuration] = useState(15);
   const [notes, setNotes] = useState('');
   const [selectedDogs, setSelectedDogs] = useState<string[]>([]);
   const [dogActivities, setDogActivities] = useState<formDogActivity[]>([]);
   const [date, setDate] = useState<Date>(new Date());
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [showTimePicker, setShowTimePicker] = useState(false);
   const [animatedDogs, setAnimatedDogs] = useState<{id: number, leftToRight: boolean, dog: Dog}[]>([]);
   const dogs = useSelector(selectAllDogs);
-  const displayedValue = duration === "" ? "" : duration;
   const dispatch = useDispatch<AppDispatch>();
 
   
@@ -91,118 +90,106 @@ export function WalkForm() {
     });
   };
 
-  const renderLabel = () => {
-    if (selectedDogs.length > 0) {
-      const dogNames = dogs.filter(dog => selectedDogs.includes(dog.name))
-        .map(dog => dog.name)
-        .join(', ');
-      return dogNames;
-    }
-    return 'Select dogs';
-  };
-
-  const onDateChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
-    if (event.type === 'dismissed') {
-      setShowDatePicker(false); // Close on cancel
-      return;
-    }
-    if (selectedDate) {
-      setDate(prev => new Date(selectedDate.setHours(prev.getHours(), prev.getMinutes())));
-    }
-    setShowDatePicker(false);
-    setShowTimePicker(true); // Open time picker after date selection
-  };
-
-  const onTimeChange = (event: DateTimePickerEvent, selectedTime?: Date) => {
-    if (event.type === 'dismissed') {
-      setShowTimePicker(false); // Close on cancel
-      return;
-    }
-    if (selectedTime) {
-      setDate(prev => {
-        const newDate = new Date(prev);
-        newDate.setHours(selectedTime.getHours(), selectedTime.getMinutes());
-        return newDate;
-      });
-    }
-    setShowTimePicker(false);
-  };
+  
 
   const handleSubmit = async () => {
     const dateString = date.getTime();
-    const finalDuration = duration === "" ? "15" : duration;
-    // const finalDogActivities: submitDogActivity[] = dogActivities.map(activity => {
-    //   const dogId = dogs.find(dog => dog.name === activity.dogName )!.id;
-    //   return {dogId: dogId, pee: activity.pee, poop: activity.poop};
-    // })
-
+    
     if (!walkerName || !selectedDogs.length) {
-        Alert.alert('plase enter walker name and select dogs!');
+        Alert.alert("please select walker name and select dogs!");
         return;
     }
 
-    await dispatch(submitWalk({ walkerName, dogActivities, duration: Number(finalDuration), notes, date: dateString}))
+    if (!duration) {
+      Alert.alert("duration cannot be 0!");
+      return;
+    }
+
+    await dispatch(submitWalk({ walkerName, dogActivities, duration: duration, notes, date: dateString}))
   
-    setDuration('');
+    setDuration(15);
     setNotes('');
-    setDogActivities([]);
+    setDogActivities(prev => prev.map(activity => ({ ...activity, pee: false, poop: false})));
     setDate(new Date());
-    setShowDatePicker(false);
-    setShowTimePicker(false);
     Alert.alert("Walk added!");
 
   };
 
 
     return(
-      <SafeAreaView style={styles.container} edges={['bottom', 'left', 'right']}>
+      <SafeAreaView style={styles.container} edges={['bottom', 'left', 'right', 'top']}>
+        
         <Text style={styles.heading}>{"New Walk"}</Text>
-        <WalkerDropdown
-          value={walkerName}
-          onChange={setWalkerName}
-        />
-       
-        <DogsMultiSelect
-          value={selectedDogs}
-          onChange={handleDogSelection}
-          placeholder={renderLabel}
-          selected={selectedDogs}
-        />
-        
-        <DogActivityToggles
-          selectedDogs={selectedDogs}
-          dogActivities={dogActivities}
-          toggleActivity={toggleActivity}
-        />
-        
-        <DateTimePickerField
-          date={date}
-          showDatePicker={showDatePicker}
-          showTimePicker={showTimePicker}
-          setShowDatePicker={setShowDatePicker}
-          setShowTimePicker={setShowTimePicker}
-          onDateChange={onDateChange}
-          onTimeChange={onTimeChange}
-        />
-     
-        <DurationInput
-          placeholder="Duration (minutes) - 15"
-          value={displayedValue}
-          onChange={setDuration}
-        />
 
-        <NotesInput
-          placeholder="Notes (optional)"
-          value={notes}
-          onChange={setNotes}
-        />
+        {/* Top row */}
+        <View style={styles.topRow}>
+          {/* Left column */}
+          <View style={styles.leftCol}>
+            <WalkerDropdown
+              value={walkerName}
+              onChange={setWalkerName}
+            />
+          </View>
+
+          {/* Top right */}
+          <View style={styles.rightCol}>
+            <DogsMultiSelect
+              onChange={handleDogSelection}
+              selectedDogs={selectedDogs}
+              dogActivities={dogActivities}
+              toggleActivity={toggleActivity}
+            />
+          </View>
+        </View>
         
-        <Button title="Save Walk" onPress={handleSubmit} />
+        {/* Middle row  */}
+        <View style={styles.topRow}>
+          {/* Left column */}
+          <View style={styles.leftCol}>
+            <DateTimePickerField
+              date={date}
+              onChange={setDate}
+            />
+          </View>
+
+          {/* Right column */}
+          <View style={styles.rightCol}>
+            <DogActivityToggles
+              selectedDogs={selectedDogs}
+              dogActivities={dogActivities}
+              toggleActivity={toggleActivity}
+            />
+          </View>
+        </View>
+
+        {/* Bottom row  */}
+        <View style={styles.topRow}>
+          {/* Left column */}
+          <View style={styles.leftCol}>
+            <DurationInput
+              value={duration}
+              onChange={setDuration}
+            />
+          </View>
+
+          {/* Right column */}
+          <View style={styles.rightCol}>
+            <NotesInput
+              value={notes}
+              onChange={setNotes}
+            />
+          </View>
+        </View>
+
+        <TouchableOpacity onPressOut={handleSubmit} style={styles.submitButton}>
+          {/* <Ionicons name="paw" size={22} color="white" /> */}
+          <Text style={styles.submitText}>Save Walk!</Text>
+        </TouchableOpacity>
+        {/* <Button title="Save Walk" onPress={handleSubmit} style={styles.submitButton}/> */}
         
         {animatedDogs.map( animated => 
           <SkiddingDog key={animated.id} leftToRight={animated.leftToRight} dog={animated.dog} onFinish={() => handleDogFinish(animated.id)} />
         )}
-
       </SafeAreaView>
     );
 }
@@ -210,14 +197,45 @@ export function WalkForm() {
 const styles = StyleSheet.create({
   container: {
     padding: 20,
-    paddingTop: 100,
     gap: 10,
     justifyContent: 'center',
   },
   heading: {
+    fontFamily: 'Quicksand_700Bold',
     fontSize: 24,
-    fontWeight: 'bold',
     marginBottom: 20,
     textAlign: 'center',
+  },
+  topRow: {
+    flexDirection: 'row',
+    gap: 5,
+    marginBottom: 5,
+    alignSelf: 'center',
+    justifyContent: 'center',
+    marginLeft: 13,
+  },
+  leftCol: {
+    flex: 1,
+    gap: 5,
+  },
+  rightCol: {
+    flex: 1,
+    gap: 5,
+  },
+  submitButton: {
+    backgroundColor: MyTheme.colors.primary,
+    width: '40%',
+    marginTop: -10,
+    alignSelf: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 18,
+    borderRadius: 25,
+    alignItems: 'center',
+    elevation: 4,
+  },
+  submitText: {
+    color: 'white',
+    fontSize: 18,
+    fontFamily: 'Quicksand_600SemiBold',
   },
 });
